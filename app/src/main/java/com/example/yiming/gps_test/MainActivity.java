@@ -74,11 +74,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         googleApiClient.connect();
         fusedLocationProviderApi = LocationServices.FusedLocationApi;
         locationRequest = new LocationRequest();
-        locationRequest.setInterval(10000);
-        locationRequest.setFastestInterval(5000);
+        locationRequest.setInterval(60000);
+        locationRequest.setFastestInterval(10000);
         locationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
-        recyclerView=findViewById(R.id.recycler);
-        locationList=new ArrayList<>();
+
+
+        recyclerView = findViewById(R.id.recycler);
+        locationList = new ArrayList<>();
 //        button=findViewById(R.id.button);
 //        button.setOnClickListener(new View.OnClickListener() {
 //            @Override
@@ -91,40 +93,40 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
 
         //start to request location jsonArray
-        queue= Volley.newRequestQueue(this);
-        String url="http://localsearch.azurewebsites.net/api/Locations";
-        jsonArrayRequest= new JsonArrayRequest(Request.Method.GET, url,null, new Response.Listener() {
+        queue = Volley.newRequestQueue(this);
+        String url = "http://localsearch.azurewebsites.net/api/Locations";
+        jsonArrayRequest = new JsonArrayRequest(Request.Method.GET, url, null, new Response.Listener() {
             @Override
             public void onResponse(Object response) {
-                JSONArray jsonArray= (JSONArray) response;
-                        for(int i=0;i<jsonArray.length();i++){
-                            JSONObject jsonObject= null;
-                            try {
-                                jsonObject = jsonArray.getJSONObject(i);
-                                MyLocation myLocation=new MyLocation(
-                                        jsonObject.getString("ID"),
-                                        jsonObject.getString("Name"),
-                                        jsonObject.getString("Latitude"),
-                                        jsonObject.getString("Longitude"),
-                                        jsonObject.getString("Address"),
-                                        jsonObject.getString("ArrivalTime"));
-                                Log.i("MyLocation ", myLocation.getID());
-                                locationList.add(myLocation);
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        //sort list by name, address
-                        Collections.sort(locationList,new MyComparator());
-
-                        //put list into recyclerView
-                        LocationAdapter locationAdapter=new LocationAdapter(MainActivity.this,locationList);
-                        recyclerView.setHasFixedSize(true);
-                        recyclerView.addItemDecoration(new DividerItemDecoration(MainActivity.this,DividerItemDecoration.VERTICAL));
-                        recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
-                        recyclerView.setAdapter(locationAdapter);
-
+                JSONArray jsonArray = (JSONArray) response;
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = null;
+                    try {
+                        jsonObject = jsonArray.getJSONObject(i);
+                        MyLocation myLocation = new MyLocation(
+                                jsonObject.getString("ID"),
+                                jsonObject.getString("Name"),
+                                jsonObject.getString("Latitude"),
+                                jsonObject.getString("Longitude"),
+                                jsonObject.getString("Address"),
+                                jsonObject.getString("ArrivalTime"));
+                        Log.i("MyLocation ", myLocation.getID());
+                        locationList.add(myLocation);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
+                }
+                //sort list by name, address
+                Collections.sort(locationList, new MyComparator());
+
+                //put list into recyclerView
+                LocationAdapter locationAdapter = new LocationAdapter(MainActivity.this, locationList);
+                recyclerView.setHasFixedSize(true);
+                recyclerView.addItemDecoration(new DividerItemDecoration(MainActivity.this, DividerItemDecoration.VERTICAL));
+                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                recyclerView.setAdapter(locationAdapter);
+
+            }
 
         }, new Response.ErrorListener() {
             @Override
@@ -132,7 +134,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
             }
         });
-        queue.add(jsonArrayRequest);
+
     }
 
     @Override
@@ -156,14 +158,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     @Override
-    public void onLocationChanged(Location location){
-//        mla=location.getLatitude();
-//        mlon=location.getLongitude();
+    public void onLocationChanged(Location location) {
+        mla = location.getLatitude();
+        mlon = location.getLongitude();
+        queue.add(jsonArrayRequest);
 //
 //        latitude.setText(String.valueOf(mla));
 //        longitude.setText(String.valueOf(mlon));
     }
-
 
 
     @Override
@@ -185,22 +187,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onResume() {
         super.onResume();
-        if(googleApiClient.isConnected()){
+        if (googleApiClient.isConnected()) {
             myLocationUpdate();
         }
     }
 
 
-    public class MyComparator implements Comparator{
+    public class MyComparator implements Comparator {
 
         @Override
         public int compare(Object o1, Object o2) {
-            MyLocation m1= (MyLocation) o1;
-            MyLocation m2= (MyLocation) o2;
-            if(m1.getName().equals(m2.getName())){
-                return m1.getArrivalTime().compareTo(m2.getArrivalTime());
+            MyLocation m1 = (MyLocation) o1;
+            MyLocation m2 = (MyLocation) o2;
+
+            Double dis1 = m1.compareDistance(mla, mlon);
+            Double dis2 = m2.compareDistance(mla, mlon);
+
+            if (dis1==dis2) {
+                return m1.compareArraivlTime(m2.getArrivalTime());
             }
-            return  m1.getName().compareTo(m2.getName());
+            return dis1>dis2 ? 1:-1;
         }
     }
 
